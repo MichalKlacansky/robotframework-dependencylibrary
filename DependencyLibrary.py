@@ -8,10 +8,10 @@ except ImportError:
 
 
 __all__ = ('DependencyLibrary',)
-__version__ = '3.0.1'
+__version__ = '3.1.0'
 
 
-def _depends_on(status_map, dependency_type, name):
+def _depends_on(status_map, dependency_type, name, skip):
     message = 'Dependency not met: ' + dependency_type + ' ' + repr(name)
     status = status_map.get(name.lower(), None)
     if status is None:
@@ -22,6 +22,8 @@ def _depends_on(status_map, dependency_type, name):
         return
     if status == 'SKIP':
         raise _SkipExecution(message + ' was skipped.')
+    if skip:
+        raise _SkipExecution(message + ' was skipped because dependency failed.')
     assert status == 'FAIL', message + ' has status ' + repr(status) + '.'
     raise AssertionError(message + ' failed.')
 
@@ -48,7 +50,10 @@ class DependencyLibrary(object):
         self._suite_status_map[suite.name.lower()] = result.status
 
     def depends_on_test(self, name):
-        _depends_on(self._test_status_map, 'test case', name)
+        _depends_on(self._test_status_map, 'test case', name, False)
+
+    def skip_depending_test_on_fail(self, name):
+        _depends_on(self._test_status_map, 'test case', name, True)
 
     def depends_on_suite(self, name, status='PASS'):
-        _depends_on(self._suite_status_map, 'test suite', name)
+        _depends_on(self._suite_status_map, 'test suite', name, False)
